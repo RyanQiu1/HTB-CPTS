@@ -1,0 +1,115 @@
+SMB -> Server Message Block 445
+
+smbclient -L
+
+nmap -p- -sV // Scan all 65536 Ports
+
+redis-cli -h {host}
+
+Enumeration 
+1. info
+2. Select the database through select {}
+3. Select all the keys *
+
+get "{key}"
+
+gobuster dir --url http://10.129.22.229/ --wordlist SecLists-master/Discovery/Web-Content/directory-list-2.3-small.txt
+
+SQL injection
+admin'#
+
+mysql -h {ip} -u root
+
+nmap -sV -sC {host}
+
+-p- : This flag scans for all TCP ports ranging from 0-65535
+-sV : Attempts to determine the version of the service running on a port
+--min-rate : This is used to specify the minimum number of packets Nmap should send per
+second; it speeds up the scan as the number goes highers
+
+Name-Based Virtual hosting is a method for hosting multiple domain names (with separate handling of
+each name) on a single server. This allows one server to share its resources, such as memory and processor
+cycles, without requiring all the services to be used by the same hostname.
+The web server checks the domain name provided in the Host header field of the HTTP request and sends
+a response according to that
+
+dir : Uses directory/file enumeration mode.
+--url : The target URL.
+--wordlist : Path to the wordlist.
+-x : File extension(s) to search for
+
+LFI or Local File Inclusion occurs when an attacker is able to get a website to include a file that was not
+intended to be an option for this application. A common example is when an application uses the path to a
+file as input. If the application treats this input as trusted, and the required sanitary checks are not
+performed on this input, then the attacker can exploit it by using the ../ string in the inputted file name
+and eventually view sensitive files in the local file system. In some limited cases, an LFI can lead to code
+execution as well.
+RFI or Remote File Inclusion is similar to LFI but in this case it is possible for an attacker to load a remote
+file on the host using protocols like HTTP, FTP etc.
+
+LFI 
+http://unika.htb/index.php?page=../../../../../../../../windows/system32/drivers/etc/hosts
+
+
+We know that this web page is vulnerable to the file inclusion vulnerability and is being served on a
+Windows machine. Thus, there exists a potential for including a file on our attacker workstation. If we select
+a protocol like SMB, Windows will try to authenticate to our machine, and we can capture the NetNTLMv2
+
+
+NTLM is a collection of authentication protocols created by Microsoft. It is a challenge-response
+authentication protocol used to authenticate a client to a resource on an Active Directory domain.
+It is a type of single sign-on (SSO) because it allows the user to provide the underlying authentication factor
+only once, at login.
+The NTLM authentication process is done in the following way :
+1. The client sends the user name and domain name to the server.
+2. The server generates a random character string, referred to as the challenge.
+3. The client encrypts the challenge with the NTLM hash of the user password and sends it back to the
+server.
+4. The server retrieves the user password (or equivalent).
+5. The server uses the hash value retrieved from the security account database to encrypt the challenge
+string. The value is then compared to the value received from the client. If the values match, the client
+is authenticated.
+A more detailed explanation of the working of NTLM authentication can be found here.
+
+
+
+The terminology around NTLM authentication is messy, and even pros misuse it from time to time, so let's
+get some key terms defined:
+A hash function is a one-way function that takes any amount of data and returns a fixed size value.
+Typically, the result is referred to as a hash, digest, or fingerprint. They are used for storing passwords
+more securely, as there's no way to convert the hash directly back to the original data (though there
+are attacks to attempt to recover passwords from hashes, as we'll see later). So a server can store a
+hash of your password, and when you submit your password to the site, it hashes your input, and
+compares the result to the hash in the database, and if they match, it knows you supplied the correct
+password.
+An NTHash is the output of the algorithm used to store passwords on Windows systems in the SAM
+database and on domain controllers. An NTHash is often referred to as an NTLM hash or even just an
+NTLM, which is very misleading / confusing.
+When the NTLM protocol wants to do authentication over the network, it uses a challenge / response
+model as described above. A NetNTLMv2 challenge / response is a string specifically formatted to
+include the challenge and response. This is often referred to as a NetNTLMv2 hash, but it's not actually
+a hash. Still, it is regularly referred to as a hash because we attack it in the same manner. You'll see
+NetNTLMv2 objects referred to as NTLMv2, or even confusingly as NTLM
+
+
+In the PHP configuration file php.ini , "allow_url_include" wrapper is set to "Off" by default, indicating that
+PHP does not load remote HTTP or FTP URLs to prevent remote file inclusion attacks. However, even if
+allow_url_include and allow_url_fopen are set to "Off", PHP will not prevent the loading of SMB URLs.
+In our case, we can misuse this functionality to steal the NTLM hash.
+Now, using the example from this link we can attempt to load a SMB URL, and in that process, we can
+capture the hashes from the target using Responder
+
+
+Responder
+
+Check if responder can listen to SMB events
+
+sudo python3 Responder.py -I tun0
+
+John the ripper
+john -w=/usr/share/wordlists/rockyou.txt hash.txt
+
+We'll connect to the WinRM service on the target and try to get a session. Because PowerShell isn't installed
+on Linux by default, we'll use a tool called Evil-WinRM which is made for this kind of scenario.
+
+evil-winrm -i 10.129.136.91 -u administrator -p badminton
